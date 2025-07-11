@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: file:misc/.env[.properties]
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            # Public routes no authentication are needed.
+            - id: auth-service
+              uri: lb://auth-service
+              predicates:
+                - Path=/auth-service/**
+              filters:
+                - RewritePath=/auth-service/(?<segment>.*), /api/v1/auth/${segment}
+              metadata:
+                is-public: true
+            - id: user-service
+              uri: lb://auth-service
+              predicates:
+                - Path=/user-service/**
+              filters:
+                - RewritePath=/user-service/(?<segment>.*), /api/v1/auth/${segment}
+              metadata:
+                is-public: true
+            # Protected routes
+            - id: task-service-no-segment
+              uri: lb://todo-list-api
+              predicates:
+                - Path=/task-service
+              filters:
+                - RewritePath=/task-service, /api/v1/task
+              metadata:
+                is-public: false
+            - id: task-service-with-segment
+              uri: lb://todo-list-api
+              predicates:
+                - Path=/task-service/**
+              filters:
+                - RewritePath=/task-service/(?<segment>.*), /api/v1/task/${segment}
+              metadata:
+                is-public: false
+eureka:
+  client:
+    fetch-registry: true
+    register-with-eureka: true
+    service-url:
+      defaultZone: http://localhost:8070/eureka/
+  instance:
+    hostname: localhost
+jwt:
+  secret:
+    path: ${JWT_SECRET_PATH}
+server:
+  port: 8071
